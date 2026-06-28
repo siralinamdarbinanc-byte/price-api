@@ -2,6 +2,23 @@ export async function handleAdmin(request, env, corsHeaders) {
   const url = new URL(request.url);
   const path = url.pathname;
 
+  // POST /admin/clear
+  if (path === '/admin/clear' && request.method === 'POST') {
+    try {
+      await env.DB.prepare('DELETE FROM products').run();
+      await env.DB.prepare('DELETE FROM search_logs').run();
+      
+      return new Response(JSON.stringify({ success: true, message: 'Database cleared' }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+  }
+
   // POST /admin/import
   if (path === '/admin/import' && request.method === 'POST') {
     try {
@@ -9,16 +26,15 @@ export async function handleAdmin(request, env, corsHeaders) {
       const products = body.products || [];
       let inserted = 0;
 
-      for (let i = 0; i < products.length; i += 100) {
-        const chunk = products.slice(i, i + 100);
+      for (let i = 0; i < products.length; i += 10) {
+        const chunk = products.slice(i, i + 10);
         const statements = chunk.map(p =>
           env.DB.prepare(`
             INSERT INTO products (code, name, brand, car, category, price, stock, keywords, normalized_name)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             p.code || '', p.name || '', p.brand || '', p.car || '', p.category || '',
-            p.price || 0, p.stock || 0, p.keywords || '',
-            (p.name || '').toLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/ة/g, 'ه')
+            p.price || 0, p.stock || 0, p.keywords || '', p.normalized_name || ''
           )
         );
         await env.DB.batch(statements);

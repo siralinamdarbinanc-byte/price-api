@@ -1,37 +1,38 @@
 import csv
 import json
-
-encodings = ['utf-8', 'windows-1256', 'latin-1', 'iso-8859-1', 'cp1252']
+import re
 
 data = []
-file_read = False
+with open('data.csv', 'r', encoding='utf-8') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        # استخراج قیمت (حذف کاما و تبدیل به عدد)
+        price_str = row.get('قیمت فروش به ریال', '0').replace(',', '').replace('"', '').strip()
+        try:
+            price = int(price_str)
+        except:
+            price = 0
+        
+        name = row.get('نام کالا', '').strip()
+        # ساخت normalized_name برای جستجوی بهتر
+        normalized = name.lower().replace('ي', 'ی').replace('ك', 'ک').replace('ة', 'ه').replace('‌', '')
+        
+        data.append({
+            'code': row.get('ردیف', '').strip(),
+            'name': name,
+            'brand': row.get('برند', '').strip(),
+            'car': '',
+            'category': '',
+            'price': price,
+            'stock': 0,
+            'keywords': name,
+            'normalized_name': normalized
+        })
 
-for enc in encodings:
-    try:
-        with open('data.csv', 'r', encoding=enc) as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                data.append({
-                    'code': row.get('code', ''),
-                    'name': row.get('name', ''),
-                    'brand': row.get('brand', ''),
-                    'car': row.get('car', ''),
-                    'category': row.get('category', ''),
-                    'price': int(row.get('price', 0)) if str(row.get('price', '')).strip().isdigit() else 0,
-                    'stock': int(row.get('stock', 0)) if str(row.get('stock', '')).strip().isdigit() else 0,
-                    'keywords': row.get('keywords', '')
-                })
-            file_read = True
-            print(f"Encoding موفق: {enc}")
-            break
-    except Exception as e:
-        print(f"Encoding {enc} کار نکرد: {e}")
-        continue
+with open('import-data.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
 
-if not file_read:
-    print("هیچ encoding ای کار نکرد!")
-else:
-    with open('import-data.json', 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"تعداد {len(data)} رکورد آماده شد!")
-    print("فایل import-data.json ساخته شد.")
+print(f"تعداد {len(data)} رکورد آماده شد!")
+print("نمونه رکورد اول:")
+if data:
+    print(json.dumps(data[0], ensure_ascii=False, indent=2))
