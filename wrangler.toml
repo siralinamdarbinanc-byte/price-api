@@ -1,4 +1,4 @@
-name = "price-api"
+name = "price-api-v2"
 main = "src/index.js"
 compatibility_date = "2025-01-15"
 
